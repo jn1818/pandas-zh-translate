@@ -28,6 +28,23 @@ the previous section:
                  major_axis=pd.date_range('1/1/2000', periods=5),
                  minor_axis=['A', 'B', 'C', 'D'])
 
+==============================
+ 基本功能
+==============================
+
+在这里我们讨论许多 pandas 数据
+结构的基本功能. 下面是一些前面章节所用的如何创建对象的例子:
+
+.. ipython:: python
+
+   index = pd.date_range('1/1/2000', periods=8)
+   s = pd.Series(np.random.randn(5), index=['a', 'b', 'c', 'd', 'e'])
+   df = pd.DataFrame(np.random.randn(8, 3), index=index,
+                     columns=['A', 'B', 'C'])
+   wp = pd.Panel(np.random.randn(2, 5, 4), items=['Item1', 'Item2'],
+                 major_axis=pd.date_range('1/1/2000', periods=5),
+                 minor_axis=['A', 'B', 'C', 'D'])
+
 .. _basics.head_tail:
 
 Head and Tail
