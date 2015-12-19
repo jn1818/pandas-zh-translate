@@ -119,6 +119,50 @@ unlike the axis labels, cannot be assigned to.
     strings are involved, the result will be of object dtype. If there are only
     floats and integers, the resulting array will be of float dtype.
 
+.. _basics.attrs:
+
+属性和原始 ndarray(s)
+---------------------------------
+
+pandas 对象有许多属性,使用这些属性可以访问元数据
+
+  * **shape**: 提供对象的轴的维数, 它符合 ndarray
+  * 轴标签
+
+    * **序列**: *索引* (单轴)
+    * **数据框**: *索引* (行) 和 *列*
+    * **面板**: *项目s*, *主轴*, 和 *副轴*
+
+注意, **这些属性可以安全地进行赋值**!
+
+.. code-block:: python
+
+   df[:2]
+   df.columns = [x.lower() for x in df.columns]
+   df
+
+为了获取数据结构中真实的值,只需要访问
+**values** 属性:
+
+.. code-block:: python
+
+    s.values
+    df.values
+    wp.values
+
+如果数据框或者面板包含同种类型的数据,那么N数组
+就是可修改的,变更将会反射到数据结构中. 
+对于类型不同的数据 (例如,数据框的列不同类型), 
+不适合这种情况. 值属性本身,不像
+轴标签, 不能赋值.
+
+.. note::
+
+    当用不同类型数据工作的时候, 返回的作为结果的n数组
+    会选择最复杂的类型以适应所有的数据. 例如, 如果
+    字符串是最复杂的, 那么作为结果的n数组的类型就是对象. 
+    如果只有浮点数与整数,那么结果数组就会是浮点类型.
+
 .. _basics.accelerate:
 
 Accelerated operations
@@ -146,6 +190,32 @@ Here is a sample (using 100 column x 100,000 row ``DataFrames``):
 You are highly encouraged to install both libraries. See the section
 :ref:`Recommended Dependencies <install.recommended_dependencies>` for more installation info.
 
+.. _basics.accelerate:
+
+加速操作
+----------------------
+
+pandas 已经支持使用 ``numexpr`` 库和 ``bottleneck`` 来
+加速某些二进制数值类型和布尔类型的操作.
+
+当处理数据集合时这些库特别有用, 大大提升了
+速度. ``numexpr`` 使用敏捷分块, 缓存, 和多核心. ``bottleneck`` 是
+一套专用的 cython routines ,它在处理带有``nans`` 值的数组时特别快.
+
+这里是一个例子 ( 100 列 x 100,000 行 ``数据框``):
+
+.. csv-table::
+    :header: "Operation", "0.11.0 (ms)", "Prior Version (ms)", "Ratio to Prior"
+    :widths: 25, 25, 25, 25
+    :delim: ;
+
+    ``df1 > df2``; 13.32; 125.35;  0.1063
+    ``df1 * df2``; 21.71;  36.63;  0.5928
+    ``df1 + df2``; 22.04;  36.50;  0.6039
+
+我们强烈建议你们安装这两个库. 查看章节
+:ref:`Recommended Dependencies <install.recommended_dependencies>` 获取更多的安装信息.
+
 .. _basics.binop:
 
 Flexible binary operations
@@ -161,6 +231,19 @@ of interest:
 We will demonstrate how to manage these issues independently, though they can
 be handled simultaneously.
 
+.. _basics.binop:
+
+灵活的二进制操作
+--------------------------
+
+在pandas数据结构之间进行的二进制操作,有二个有趣的关键点:
+
+  * 高低维度(例如数据框和序列对象)之间的广播行为.
+  * 计算中缺失数据的处理
+
+我们会演示如何管理这些一个个的问题,
+虽然它们可以同时进行处理.
+
 Matching / broadcasting behavior
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -170,6 +253,65 @@ DataFrame has the methods :meth:`~DataFrame.add`, :meth:`~DataFrame.sub`,
 for carrying out binary operations. For broadcasting behavior,
 Series input is of primary interest. Using these functions, you can use to
 either match on the *index* or *columns* via the **axis** keyword:
+
+.. code-block:: python
+
+   df = pd.DataFrame({'one' : pd.Series(np.random.randn(3), index=['a', 'b', 'c']),
+                      'two' : pd.Series(np.random.randn(4), index=['a', 'b', 'c', 'd']),
+                      'three' : pd.Series(np.random.randn(3), index=['b', 'c', 'd'])})
+   df
+   row = df.ix[1]
+   column = df['two']
+
+   df.sub(row, axis='columns')
+   df.sub(row, axis=1)
+
+   df.sub(column, axis='index')
+   df.sub(column, axis=0)
+
+.. code-block:: python
+   :suppress:
+
+   df_orig = df
+
+Furthermore you can align a level of a multi-indexed DataFrame with a Series.
+
+.. code-block:: python
+
+   dfmi = df.copy()
+   dfmi.index = pd.MultiIndex.from_tuples([(1,'a'),(1,'b'),(1,'c'),(2,'a')],
+                                          names=['first','second'])
+   dfmi.sub(column, axis=0, level='second')
+
+With Panel, describing the matching behavior is a bit more difficult, so
+the arithmetic methods instead (and perhaps confusingly?) give you the option
+to specify the *broadcast axis*. For example, suppose we wished to demean the
+data over a particular axis. This can be accomplished by taking the mean over
+an axis and broadcasting over the same axis:
+
+.. code-block:: python
+
+   major_mean = wp.mean(axis='major')
+   major_mean
+   wp.sub(major_mean, axis='major')
+
+And similarly for ``axis="items"`` and ``axis="minor"``.
+
+.. note::
+
+   I could be convinced to make the **axis** argument in the DataFrame methods
+   match the broadcasting behavior of Panel. Though it would require a
+   transition period so users can change their code...
+
+匹配 / 广播行为
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+数据框有这些执行二进制操作的方法 :meth:`~DataFrame.add`, :meth:`~DataFrame.sub`,
+:meth:`~DataFrame.mul`, :meth:`~DataFrame.div` 以及相关的函数方法
+:meth:`~DataFrame.radd`, :meth:`~DataFrame.rsub`, ... . 
+对于广播行为,
+序列输入是最有趣的. 使用这些方法,可以
+通过 **axis** 关键字来或者匹配于 *索引* 或者匹配于 *列* :
 
 .. code-block:: python
 
