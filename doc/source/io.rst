@@ -2354,6 +2354,50 @@ argument to ``to_excel`` and to ``ExcelWriter``. The built-in engines are:
    options.io.excel.xlsx.writer = 'xlsxwriter'
 
    df.to_excel('path_to_file.xlsx', sheet_name='Sheet1')
+   
+.. _io.excel.writers:
+
+Excel 写入器引擎
+''''''''''''''''''''
+
+.. versionadded:: 0.13
+
+``pandas`` 通过两种方法选择一个 Excel 写入器:
+
+1. 通过 ``engine`` 关键字参数
+2. 通过文件名的扩展 (在设置选项中指定的默认值)
+
+默认情况下, ``pandas`` 使用 `XlsxWriter`_  于 ``.xlsx`` 和 `openpyxl`_
+于 ``.xlsm`` 文件和 `xlwt`_ 于 ``.xls`` 文件.  如果安装了多个
+引擎, 可能通过 :ref:`setting the
+config options <options>` ``io.excel.xlsx.writer`` 以及
+``io.excel.xls.writer``设置默认的引擎. 如果 `Xlsxwriter`_ 不可用,pandas 会调用 `openpyxl`_ 于 ``.xlsx``.
+
+.. _XlsxWriter: http://xlsxwriter.readthedocs.org
+.. _openpyxl: http://openpyxl.readthedocs.org/
+.. _xlwt: http://www.python-excel.org
+
+为了指定要使用的写入器,可以传递 engine 关键字
+参数给 ``to_excel`` 和给 ``ExcelWriter``. 内建的引擎是:
+
+- ``openpyxl``: 包含对从 Openpyxl  1.6.1起的稳定支持. 然而,
+  建议使用版本 2.2 和更高, 特别是用下面形态动作时.  
+- ``xlsxwriter``
+- ``xlwt``
+
+.. code-block:: python
+
+   # 通过设置数据框和面板中的 'to_excel()' 方法的 'engine' .
+   df.to_excel('path_to_file.xlsx', sheet_name='Sheet1', engine='xlsxwriter')
+
+   # 通过设置 ExcelWriter 构造器中的 'engine' .
+   writer = ExcelWriter('path_to_file.xlsx', engine='xlsxwriter')
+
+   # 或者通过 pandas 设置.
+   from pandas import options
+   options.io.excel.xlsx.writer = 'xlsxwriter'
+
+   df.to_excel('path_to_file.xlsx', sheet_name='Sheet1')   
 
 .. _io.clipboard:
 
